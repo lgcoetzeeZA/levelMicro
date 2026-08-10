@@ -1,0 +1,29 @@
+{
+  "version": "1.0.2",
+  "files": {
+    "config.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/config.py",
+      "sha256": "aa3f3e270f27ac8bac8d812fba7ec41afea20dcb13e8551d202deba550d36a17"
+    },
+    "leds.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/leds.py",
+      "sha256": "821cc97991f218c0ad99a148acd9d14484140a8b70f96d9b0c10049c9fbac473"
+    },
+    "main.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/main.py",
+      "sha256": "c776c678a3999d48e7e1974d03ce41dba5dd1956e9e9dac165945650920ab674"
+    },
+    "ota_updater.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/ota_updater.py",
+      "sha256": "ca78590c978d1331c83297dac53f4ed53a523551de3c792962918e76b66bffe0"
+    },
+    "sensor.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/sensor.py",
+      "sha256": "60ce153d61c45f41845431b96c156fccadc6e6cb782ae359c3775b29e1639f59"
+    },
+    "wifi_portal.py": {
+      "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/wifi_portal.py",
+      "sha256": "d95a6b36bcf12acf38694184d1e0968b7e50adffeb739ba06bd5dd086d2d04c8"
+    }
+  }
+}
