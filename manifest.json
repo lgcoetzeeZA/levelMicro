@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "files": {
     "config.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/config.py",
@@ -11,7 +11,7 @@
     },
     "main.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/main.py",
-      "sha256": "c776c678a3999d48e7e1974d03ce41dba5dd1956e9e9dac165945650920ab674"
+      "sha256": "20d7b5527b0909d388f51987ad0c708933975805463dbe5f82ae9aa341a7a4e7"
     },
     "ota_updater.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/ota_updater.py",

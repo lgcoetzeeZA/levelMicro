@@ -134,10 +134,44 @@ def publish_config():
         print("publish_config failed:", e)
 
 
+def _rssi_to_pct(rssi):
+    """Rough dBm -> 0-100% signal quality, same convention Windows/most
+    router UIs use: -100dBm or worse = 0%, -50dBm or better = 100%,
+    linear in between."""
+    if rssi <= -100:
+        return 0
+    if rssi >= -50:
+        return 100
+    return int(2 * (rssi + 100))
+
+
+def _network_info():
+    sta = network.WLAN(network.STA_IF)
+    try:
+        ip = sta.ifconfig()[0]
+    except Exception:
+        ip = ""
+    try:
+        rssi = sta.status("rssi")
+    except Exception:
+        rssi = 0
+    return ip, rssi
+
+
 def publish_data():
+    ip, rssi = _network_info()
+    wifi_signal_pct = _rssi_to_pct(rssi)
+    network_fields = {
+        "ip": ip,
+        "ssid": cfg["wifi_ssid"],
+        "rssi": rssi,
+        "wifi_signal_pct": wifi_signal_pct,
+        "version": ota_updater.get_current_version(),
+    }
+
     dist_mm = sensor.read_distance_mm()
     if dist_mm < 0:
-        payload = json.dumps({"error": "sensor_timeout"})
+        payload = json.dumps(dict({"error": "sensor_timeout"}, **network_fields))
     else:
         dist_cm = round(dist_mm / 10.0, 1)
         empty_dist_cm = cfgmod.effective_empty_dist_cm(cfg)
@@ -148,21 +182,18 @@ def publish_data():
         level_pct = round(100.0 * water_cm / height_cm, 1) if height_cm > 0 else 0.0
 
         radius_m = (cfg["tank_diameter_cm"] / 2.0) / 100.0
-        height_m = water_cm / 100.0
-        volume_l = round(math.pi * radius_m * radius_m * height_m * 1000.0, 1)
+        volume_l = round(math.pi * radius_m * radius_m * (water_cm / 100.0) * 1000.0, 1)
+        # Total reservoir capacity (at 100% full) - distinct from volume_l,
+        # which is the current volume at the current water level.
+        tank_volume_l = round(math.pi * radius_m * radius_m * (height_cm / 100.0) * 1000.0, 1)
 
-        try:
-            rssi = network.WLAN(network.STA_IF).status("rssi")
-        except Exception:
-            rssi = 0
-
-        payload = json.dumps({
+        payload = json.dumps(dict({
             "distance_cm": dist_cm,
             "water_cm": round(water_cm, 1),
             "level_pct": level_pct,
             "volume_l": volume_l,
-            "rssi": rssi,
-        })
+            "tank_volume_l": tank_volume_l,
+        }, **network_fields))
     print("publishing", topics["data"], "->", payload)
     try:
         mqtt.publish(topics["data"], payload)
