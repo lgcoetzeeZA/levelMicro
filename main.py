@@ -46,7 +46,7 @@ MQTT_PASS = ""
 # don't use it for anything sensitive or for a real production deployment.
 
 KEEPALIVE_S = 60
-PUBLISH_INTERVAL_S = 30
+PUBLISH_INTERVAL_S = 5
 WIFI_CONNECT_TIMEOUT_S = 20
 WDT_TIMEOUT_MS = 20000
 
@@ -122,11 +122,10 @@ def publish_config():
         "firmware": "LevelMicro",
         "version": ota_updater.get_current_version(),
         "prefix": cfg["mqtt_prefix"],
-        "tank_height_cm": cfg["tank_height_cm"],
-        "sensor_offset_cm": cfg["sensor_offset_cm"],
         "tank_diameter_cm": cfg["tank_diameter_cm"],
-        "empty_dist_cm": cfgmod.effective_empty_dist_cm(cfg),
-        "full_dist_cm": cfgmod.effective_full_dist_cm(cfg),
+        "tank_overflow_cm": cfg["tank_overflow_cm"],
+        "sensor_from_overflow_cm": cfg["sensor_from_overflow_cm"],
+        "tank_roof_cm": cfgmod.tank_roof_cm(cfg),
     })
     try:
         mqtt.publish(topics["config"], payload, retain=True)
@@ -174,10 +173,10 @@ def publish_data():
         payload = json.dumps(dict({"error": "sensor_timeout"}, **network_fields))
     else:
         dist_cm = round(dist_mm / 10.0, 1)
-        empty_dist_cm = cfgmod.effective_empty_dist_cm(cfg)
-        height_cm = cfg["tank_height_cm"]
+        roof_cm = cfgmod.tank_roof_cm(cfg)
+        height_cm = cfg["tank_overflow_cm"]
 
-        water_cm = empty_dist_cm - dist_cm
+        water_cm = roof_cm - dist_cm
         water_cm = max(0.0, min(water_cm, float(height_cm)))
         level_pct = round(100.0 * water_cm / height_cm, 1) if height_cm > 0 else 0.0
 

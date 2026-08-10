@@ -38,11 +38,9 @@ button{{margin-top:20px;padding:10px 20px}}
 <label>WiFi SSID</label><input name="ssid" value="{ssid}">
 <label>WiFi Password (leave blank to keep current)</label><input name="password" type="password" value="">
 <label>MQTT topic prefix (e.g. home/tank1)</label><input name="prefix" value="{prefix}">
-<label>Tank height (cm)</label><input name="height" value="{height}">
-<label>Sensor mounting offset (cm)</label><input name="offset" value="{offset}">
-<label>Tank diameter (cm)</label><input name="diameter" value="{diameter}">
-<label>Manual EMPTY calibration distance (cm, 0=auto)</label><input name="empty_dist" value="{empty_dist}">
-<label>Manual FULL calibration distance (cm, 0=auto)</label><input name="full_dist" value="{full_dist}">
+<label>Tank Diameter (cm)</label><input name="diameter" value="{diameter}">
+<label>Tank Overflow (cm) - height from tank bottom to the overflow line</label><input name="overflow" value="{overflow}">
+<label>Sensor from Overflow (cm) - gap between the sensor and the overflow line</label><input name="sensor_from_overflow" value="{sensor_from_overflow}">
 <button type="submit">Save &amp; Reboot</button>
 </form></body></html>"""
 
@@ -220,11 +218,9 @@ def run_setup_portal(cfg, wdt=None):
                 result_cfg["mqtt_prefix"] = fields.get("prefix", result_cfg["mqtt_prefix"])
 
                 for cfg_key, form_key in (
-                    ("tank_height_cm", "height"),
-                    ("sensor_offset_cm", "offset"),
                     ("tank_diameter_cm", "diameter"),
-                    ("empty_dist_cm", "empty_dist"),
-                    ("full_dist_cm", "full_dist"),
+                    ("tank_overflow_cm", "overflow"),
+                    ("sensor_from_overflow_cm", "sensor_from_overflow"),
                 ):
                     raw = fields.get(form_key)
                     if raw is not None:
@@ -242,11 +238,9 @@ def run_setup_portal(cfg, wdt=None):
                 page = _FORM_TEMPLATE.format(
                     ssid=result_cfg["wifi_ssid"],
                     prefix=result_cfg["mqtt_prefix"],
-                    height=result_cfg["tank_height_cm"],
-                    offset=result_cfg["sensor_offset_cm"],
                     diameter=result_cfg["tank_diameter_cm"],
-                    empty_dist=result_cfg["empty_dist_cm"],
-                    full_dist=result_cfg["full_dist_cm"],
+                    overflow=result_cfg["tank_overflow_cm"],
+                    sensor_from_overflow=result_cfg["sensor_from_overflow_cm"],
                 )
                 cl.send(("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + page).encode())
         except Exception as e:

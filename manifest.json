@@ -1,9 +1,9 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "files": {
     "config.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/config.py",
-      "sha256": "aa3f3e270f27ac8bac8d812fba7ec41afea20dcb13e8551d202deba550d36a17"
+      "sha256": "48bf2a633cfd6eba43ff5cf9b18a160fe409917f07ac13c35a5ed5db90f5b278"
     },
     "leds.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/leds.py",
@@ -11,7 +11,7 @@
     },
     "main.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/main.py",
-      "sha256": "20d7b5527b0909d388f51987ad0c708933975805463dbe5f82ae9aa341a7a4e7"
+      "sha256": "0998f1cfc3853b2b7d090dd70c4aa829a55639c914c91281db1465fdb2456b3b"
     },
     "ota_updater.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/ota_updater.py",
@@ -23,7 +23,7 @@
     },
     "wifi_portal.py": {
       "url": "https://raw.githubusercontent.com/lgcoetzeeZA/levelMicro/main/wifi_portal.py",
-      "sha256": "d95a6b36bcf12acf38694184d1e0968b7e50adffeb739ba06bd5dd086d2d04c8"
+      "sha256": "4ecee8b2412af92dbdd35fcd4087c69d7c596db2283be712e29635dd17c25d4b"
     }
   }
 }
