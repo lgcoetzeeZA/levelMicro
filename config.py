@@ -104,5 +104,8 @@ def mqtt_topics(cfg):
         "status": base + "status",
         "cmd": base + "cmd",
         "config": base + "config",
-        "ota": base + "ota",
+        # Shared live-progress channel: OTA update steps AND setup-mode
+        # guidance both publish here, so watching one topic tells you
+        # what the device is doing during either operation.
+        "progress": base + "progress",
     }

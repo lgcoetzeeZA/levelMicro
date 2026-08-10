@@ -264,6 +264,9 @@ def mqtt_connect():
     mqtt.subscribe(topics["cmd"])
     mqtt.publish(topics["status"], "online", retain=True)
     publish_config()
+    _publish_progress("LevelMicro is online (v{}) and publishing data.".format(
+        ota_updater.get_current_version()
+    ))
     print("mqtt: ready")
 
 
@@ -279,12 +282,14 @@ class _WdtWithLeds:
         leds.update()
 
 
-def _ota_progress(msg):
-    # Best-effort - a flaky MQTT link publishing this shouldn't be allowed
-    # to abort an otherwise-good update (ota_updater catches OSError as a
-    # download failure, so an uncaught publish error here would do that).
+def _publish_progress(msg):
+    """Shared live-progress channel for both OTA updates and setup mode.
+    Best-effort - a flaky MQTT link publishing this shouldn't be allowed
+    to abort an otherwise-good update (ota_updater catches OSError as a
+    download failure, so an uncaught publish error here would do that)."""
+    print("progress:", msg)
     try:
-        mqtt.publish(topics["ota"], msg)
+        mqtt.publish(topics["progress"], msg)
     except Exception:
         pass
 
@@ -296,7 +301,7 @@ def run_update_check():
     leds.system_updating()
     applied = ota_updater.check_for_update(
         wdt=_WdtWithLeds(wdt),
-        on_progress=_ota_progress,
+        on_progress=_publish_progress,
     )
     if not applied:
         print("No update applied, resuming normal operation.")
@@ -363,6 +368,17 @@ def main():
 
         if setup_requested:
             setup_requested = False
+            # This is the one moment we're both connected to MQTT AND know
+            # setup is about to happen - the portal itself runs with MQTT
+            # disconnected, so this message is the only live heads-up the
+            # user gets before the device goes into AP mode.
+            ap_ssid = wifi_portal.AP_SSID_PREFIX + cfgmod.device_id()[-8:]
+            _publish_progress(
+                "Entering setup mode. Connect to WiFi '{}' (password: {}), "
+                "then browse to http://192.168.4.1 to change WiFi/tank "
+                "settings. Device is offline until you finish or it times "
+                "out in 5 minutes.".format(ap_ssid, wifi_portal.AP_PASSWORD)
+            )
             try:
                 mqtt.publish(topics["status"], "setup_mode", retain=True)
                 mqtt.disconnect()

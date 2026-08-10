@@ -82,13 +82,16 @@ browse to `http://192.168.4.1`. It asks for:
 1. WiFi SSID / password
 2. **MQTT topic prefix** — e.g. `home/tank1`. Yours to choose per device;
    everything below hangs off it as `<prefix>/LevelMicro/...`.
-3. **Tank height (cm)** — usable depth of the tank
-4. **Sensor mounting offset (cm)** — gap between the sensor and the
-   tank's max water line
-5. **Tank diameter (cm)** — used for the liters calculation (cylindrical)
-6. **Manual empty/full calibration distances (cm)** — optional. Leave at
-   `0` to auto-derive from height + offset, or fill in raw sensor
-   readings taken with the tank empty and full for tighter accuracy.
+3. **Tank Diameter (cm)** — used for the liters calculation (cylindrical)
+4. **Tank Overflow (cm)** — height from the tank bottom (0%) up to the
+   overflow line (100%). This is the usable fill height, not necessarily
+   the tank's total physical height.
+5. **Sensor from Overflow (cm)** — gap between the sensor and the
+   overflow line (i.e. the distance the sensor reads when water is
+   exactly at 100%).
+
+There's no manual empty/full calibration override — everything's derived
+from those three numbers. See "Tank geometry" below for exactly how.
 
 Save, and the device reboots connected to WiFi and MQTT.
 
@@ -107,6 +110,10 @@ and only change tank settings, or update them too if the network is
 changing. If nothing is submitted within 5 minutes, it reboots and
 resumes normal operation with the previous settings.
 
+Right before it goes into AP mode, it publishes the AP name/password and
+what to do next to `<prefix>/LevelMicro/progress` — see "MQTT topics"
+below.
+
 Other commands on the same topic:
 
 | Payload | Effect |
@@ -123,31 +130,110 @@ set in the portal, e.g. `home/tank1/LevelMicro/...`).
 
 | Topic | Direction | Payload |
 |---|---|---|
-| `.../data` | publish, every 30s | `{"distance_cm":32.0,"water_cm":68.0,"level_pct":68.0,"volume_l":534.1,"rssi":-58}` |
+| `.../data` | publish, every 5s | `{"distance_cm":32.0,"water_cm":168.0,"level_pct":85.7,"volume_l":4083.4,"tank_volume_l":4768.4,"ip":"192.168.10.188","ssid":"The_Hermitage","rssi":-58,"wifi_signal_pct":84,"version":"1.0.0"}` |
 | `.../status` | publish, retained | `online` / `offline` (last will) / `setup_mode` |
 | `.../config` | publish, retained, on connect + after changes | current tank + prefix settings as JSON |
-| `.../ota` | publish, during an `update` check | plain-text progress messages, e.g. `"Downloading: main.py"` |
+| `.../progress` | publish, during setup mode or an `update` check | plain-text status messages, see below |
 | `.../cmd` | subscribe | `setup`, `update`, `status`, `restart` |
 
-## Calibration notes
+**`.../progress` messages** - one shared channel narrates both setup mode
+and firmware updates, so subscribing to it tells you what the device is
+doing either way:
 
-- `level_pct` and `volume_l` are computed from the empty/full calibration
-  distances, clamped to `[0, tank_height_cm]`.
-- If you leave the manual empty/full fields at `0`, they're derived as:
-  - empty distance = `sensor_offset_cm + tank_height_cm`
-  - full distance = `sensor_offset_cm`
-- For best accuracy, do a real calibration: with the tank empty, note
-  `distance_cm` from `.../data`, enter it as the manual empty distance;
-  repeat full, and re-run `setup` to enter both.
-- The sensor itself still measures in mm internally (that's its native
-  resolution); it's just rounded to cm at the point data gets published.
+- Entering setup (right before going into AP mode): `"Entering setup
+  mode. Connect to WiFi 'LevelMicro-Setup-XXXXXXXX' (password:
+  levelmicro123), then browse to http://192.168.4.1 to change WiFi/tank
+  settings. Device is offline until you finish or it times out in 5
+  minutes."` — this is the one moment MQTT is still connected before the
+  portal takes over, so it's the only live heads-up you get; the portal
+  itself has no MQTT connection to report through.
+- Reconnecting (after setup, after a reboot, or just a normal
+  connect/reconnect): `"LevelMicro is online (v1.0.0) and publishing
+  data."`
+- During an `update` check: `"Checking for update (current: v1.0.0)..."`,
+  then either `"Already up to date (v1.0.0)"` or `"Update found: v1.0.1
+  (current: v1.0.0)"`, then `"Downloading: main.py"` (one message per
+  file), then `"All 2 file(s) verified. Applying update..."`, then
+  `"Update complete - now v1.0.1. Restarting..."` — or on failure,
+  `"Update failed (<reason>) - keeping current version vX"`.
+
+These are also always printed to the console, so serial and MQTT show
+the same narration.
+
+**`.../data` fields**
+
+| Field | Meaning |
+|---|---|
+| `distance_cm` | Raw sensor reading (sensor to water surface) |
+| `water_cm` | Water column height, clamped to `[0, tank_overflow_cm]` |
+| `level_pct` | Reservoir fill percentage |
+| `volume_l` | Current volume at the current water level |
+| `tank_volume_l` | Total reservoir capacity (volume when 100% full) |
+| `ip` | Device's current IP address on the WiFi network |
+| `ssid` | WiFi network name it's connected to |
+| `rssi` | WiFi signal strength in dBm |
+| `wifi_signal_pct` | Same signal strength as a rough 0–100% (-100dBm=0%, -50dBm=100%) |
+| `version` | Currently-installed firmware version (from `firmware_version.txt`) |
+
+`ip`/`ssid`/`rssi`/`wifi_signal_pct`/`version` are included even when the
+sensor reading itself times out (`{"error":"sensor_timeout", ...}`), so
+you can still tell the device is alive, on the network, and which
+firmware it's running.
+
+## Tank geometry
+
+Sensor mounted at the top, facing down at the water:
+
+```
+   sensor
+     |
+     | Sensor from Overflow (cm)   <- gap: sensor to the overflow line
+     |
+   ==+==  overflow line  (100% full - water above this spills out)
+     |
+     | Tank Overflow (cm)          <- usable fill height, bottom to overflow
+     |
+   __|__  tank bottom  (0% empty)
+```
+
+Only three numbers, set via the portal:
+
+- **Tank Diameter (cm)** - for the liters calculation (assumes cylindrical)
+- **Tank Overflow (cm)** - height from the tank bottom up to the overflow line
+- **Sensor from Overflow (cm)** - gap between the sensor and the overflow line
+
+Everything else is derived, no manual calibration step needed:
+
+- `tank_roof_cm` = `sensor_from_overflow_cm + tank_overflow_cm` - the
+  sensor's reading when the tank is completely empty. (Published in
+  `.../config` for reference; the firmware never needs you to enter it.)
+- `water_cm` = `tank_roof_cm - distance_cm`, clamped to `[0, tank_overflow_cm]`
+- `level_pct` = `water_cm / tank_overflow_cm * 100`
+- `volume_l` uses `water_cm`; `tank_volume_l` (total capacity) uses
+  `tank_overflow_cm` - both via the cylinder formula with `tank_diameter_cm`
+
+There's deliberately no manual empty/full override anymore. That existed
+before and was an easy way to get level readings stuck at 0%: for a
+top-mounted sensor, "full" is a *small* distance reading and "empty" is a
+*large* one, which is the opposite of what most people expect when asked
+to fill in "empty" and "full" distances - entering them the intuitive
+way silently breaks the math. Three unambiguous geometry numbers instead.
+
+The sensor itself still measures in mm internally (that's its native
+resolution); it's just rounded to cm at the point data gets published.
 
 ## Publish interval
 
-Fixed at 30s (`PUBLISH_INTERVAL_S` in `main.py`) — change and re-upload
-if you want a different cadence. Each successful publish now prints the
-JSON payload to the console, so a quiet Shell for the first 30s after
-boot is normal, not a hang.
+`PUBLISH_INTERVAL_S` in `main.py`, currently 5s — change and re-upload
+for a different cadence. Each successful publish prints the JSON payload
+to the console, so a quiet Shell for the first few seconds after boot is
+normal, not a hang.
+
+Going faster than a couple seconds isn't very useful: each reading is
+already a median of 5 sensor samples (~150ms), so there's a floor before
+you'd just be publishing sensor noise. Going much below ~2-3s also means
+more MQTT traffic for not much practical benefit on a water tank, which
+doesn't change level quickly.
 
 ## Watchdog
 
@@ -184,8 +270,8 @@ There's no automatic check on boot — it only runs when you ask.
    partial updates, no bricking.
 
 Progress is printed to the console at every stage and also published
-(best-effort) to `<prefix>/LevelMicro/ota`, so you can watch it either
-over serial or MQTT. The System LED fast-blinks during the process
+(best-effort) to `<prefix>/LevelMicro/progress`, so you can watch it
+either over serial or MQTT. The System LED fast-blinks during the process
 (`leds.system_updating()`) while the WiFi LED stays solid, since you're
 still connected — that combination is what tells you "updating" apart
 from "in setup mode" (where both LEDs blink).
